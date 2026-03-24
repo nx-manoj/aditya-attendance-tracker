@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+.venv/
+.idea/
+.vscode/
+
+# Test scripts and local scratch files
+test_*.py
+*fees.txt
+*Attendance Tracker.vbs
+*.log

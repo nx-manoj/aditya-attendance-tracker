@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aditya Tracker - Minimal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="glow-bg"></div>
+    <div class="container" id="main-container">
+
+        <!-- LOGIN SECTION -->
+        <div id="login-section" class="fade-in">
+            <div class="header">
+                <h2>Attendance</h2>
+                <p>Welcome back. Enter your SUC to sync.</p>
+            </div>
+
+            <form id="login-form">
+                <div class="input-group">
+                    <input type="text" id="suc" placeholder="SUC Code (e.g. 249585...)" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <input type="password" id="password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn" id="submit-btn">
+                    <span id="btn-text">Sync Data</span>
+                    <div class="loader" id="loader"></div>
+                </button>
+                <div id="error-box" class="error-msg"></div>
+            </form>
+        </div>
+
+        <!-- RESULTS SECTION -->
+        <div id="results-section" style="display: none;">
+            <div class="result-header slide-up" style="animation-delay: 0.1s;">
+                <div class="student-info">
+                    <h2 id="student-name-display">Name</h2>
+                    <p id="campus-course-display">Campus | Course</p>
+                </div>
+                <button class="btn-icon" id="back-btn" title="Back">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box slide-up" style="animation-delay: 0.2s;">
+                    <p class="stat-label">Overall</p>
+                    <h3 class="stat-value" id="overall-pct">0%</h3>
+                    <p class="stat-sub" id="present-ratio">0 / 0 Days</p>
+                </div>
+                <div class="stat-box slide-up" style="animation-delay: 0.3s;" id="fee-box">
+                    <p class="stat-label">Fee Due</p>
+                    <h3 class="stat-value fee" id="fee-due-display">₹0</h3>
+                </div>
+            </div>
+
+            <div class="action-box slide-up" style="animation-delay: 0.4s;" id="action-box">
+                <div class="pulse-ring" id="status-ring"></div>
+                <h4 id="status-title">Status</h4>
+                <p id="action-text">Calculating...</p>
+            </div>
+        </div>
+
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
