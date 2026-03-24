@@ -109,7 +109,7 @@ def get_attendance():
                 
             browser.close()
             
-            return jsonify({
+            return {
                 "success": True,
                 "student_name": student_name,
                 "campus_name": campus_name,
@@ -120,10 +120,94 @@ def get_attendance():
                 "total_days": total_days,
                 "status": status,
                 "target_days": days_target
-            })
+            }
             
     except Exception as e:
-        return jsonify({"error": "An unexpected error occurred during scraping.", "details": str(e)}), 500
+        return {"error": "An unexpected error occurred during scraping.", "details": str(e)}
+
+@app.route('/api/attendance', methods=['POST'])
+def get_attendance():
+    data = request.get_json()
+    if not data or not data.get("suc_code") or not data.get("password"):
+        return jsonify({"error": "Missing suc_code or password"}), 400
+        
+    result = fetch_attendance(data.get("suc_code"), data.get("password"))
+    if "error" in result:
+        return jsonify(result), 500 if result.get("error") == "An unexpected error occurred during scraping." else 401
+    return jsonify(result)
+
+@app.route('/api/vapidPublicKey', methods=['GET'])
+def vapid_public_key():
+    return jsonify({"publicKey": VAPID_PUBLIC_KEY})
+
+@app.route('/api/subscribe', methods=['POST'])
+def subscribe():
+    data = request.get_json()
+    suc = data.get('suc_code')
+    pwd = data.get('password')
+    sub = data.get('subscription')
+    
+    if not suc or not pwd or not sub:
+        return jsonify({"error": "Missing data"}), 400
+        
+    subs = load_subscriptions()
+    subs[suc] = {
+        "password": pwd,
+        "subscription": sub
+    }
+    save_subscriptions(subs)
+    
+    try:
+        webpush(
+            subscription_info=sub,
+            data=json.dumps({
+                "title": "Aditya Tracker Configured",
+                "body": "Push notifications are now active! You will receive daily attendance updates.",
+                "url": "/"
+            }),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims=VAPID_CLAIMS
+        )
+    except WebPushException as ex:
+        print("WebPush Error:", repr(ex))
+        
+    return jsonify({"success": True})
+
+@app.route('/api/cron/daily', methods=['GET', 'POST'])
+def cron_daily():
+    subs = load_subscriptions()
+    results = []
+    
+    for suc, user_data in subs.items():
+        pwd = user_data['password']
+        sub = user_data['subscription']
+        
+        att = fetch_attendance(suc, pwd)
+        if "error" not in att:
+            body_msg = f"{att['overall_percentage']} ({att['present_days']}/{att['total_days']}) - "
+            if att['status'] == 'safe':
+                body_msg += f"Safe to bunk {att['target_days']} days." if att['target_days'] > 0 else "Exactly at target."
+            else:
+                body_msg += f"Attend next {att['target_days']} consecutive days."
+                
+            try:
+                webpush(
+                    subscription_info=sub,
+                    data=json.dumps({
+                        "title": f"Daily Sync: {att['student_name']}",
+                        "body": body_msg,
+                        "url": "/"
+                    }),
+                    vapid_private_key=VAPID_PRIVATE_KEY,
+                    vapid_claims=VAPID_CLAIMS
+                )
+                results.append(f"Sent to {suc}")
+            except WebPushException as ex:
+                results.append(f"Failed {suc}: {repr(ex)}")
+        else:
+            results.append(f"Scrape failed {suc}: {att['error']}")
+            
+    return jsonify({"cron_sync": results})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
