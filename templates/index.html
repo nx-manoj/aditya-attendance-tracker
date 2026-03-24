@@ -5,112 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aditya Tracker</title>
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#070B14">
+    <meta name="theme-color" content="#0A0D13">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/static/icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <canvas id="bg-canvas"></canvas>
-    
-    <div class="app-wrapper">
 
-        <!-- ── LOGIN ─────────────────────────────────────── -->
-        <div id="login-section" class="screen active">
-            <div class="login-inner">
-                <div class="brand">
-                    <div class="brand-icon">
-                        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="40" height="40" rx="12" fill="url(#brandGrad)"/>
-                            <path d="M13 20L18 25L27 15" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <defs>
-                                <linearGradient id="brandGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-                                    <stop stop-color="#6C63FF"/>
-                                    <stop offset="1" stop-color="#3ECFCF"/>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                    <h1 class="brand-name">Aditya Tracker</h1>
-                    <p class="brand-sub">Smart Attendance Intelligence</p>
-                </div>
+    <!-- ── LOGIN PAGE ────────────────────────────── -->
+    <div id="login-page" class="page active">
+        <nav class="navbar">
+            <span class="nav-brand">Aditya<span class="nav-accent">Tracker</span></span>
+            <span class="nav-tag">ADITYA ANALYSIS</span>
+        </nav>
 
-                <form id="login-form" class="glass-card" autocomplete="off">
-                    <div class="field-wrap">
-                        <label>SUC Code</label>
-                        <div class="field-inner">
-                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            <input type="text" id="suc" placeholder="e.g. 2495850213" required autocomplete="off" spellcheck="false">
-                        </div>
-                    </div>
-                    <div class="field-wrap">
-                        <label>Password</label>
-                        <div class="field-inner">
-                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                            <input type="password" id="password" placeholder="Your password" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="cta-btn" id="submit-btn">
-                        <span id="btn-text">Sync Attendance</span>
-                        <div class="btn-loader" id="loader"></div>
-                    </button>
-                    <p id="error-box" class="error-msg"></p>
-                </form>
-                <p class="footer-note">Your credentials are never stored locally.</p>
+        <div class="hero">
+            <h1 class="hero-title">Smart Attendance<br>for Aditya Students</h1>
+            <p class="hero-sub">Log in once — see exactly when to attend and<br class="br-hide">when you're safe to skip.</p>
+            <div class="badges">
+                <span class="badge">🔒 No data stored</span>
+                <span class="badge">📊 Bunk calculator</span>
+                <span class="badge">⚡ Instant</span>
             </div>
         </div>
 
-        <!-- ── RESULTS ──────────────────────────────────── -->
-        <div id="results-section" class="screen">
-            <!-- top bar -->
-            <div class="topbar">
-                <button class="icon-btn" id="back-btn" title="Back">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <div class="login-card">
+            <h2 class="card-title">Sign in to Portal</h2>
+            <p class="card-sub">Use your <a href="https://analysis.aditya.ac.in" target="_blank">analysis.aditya.ac.in</a> credentials</p>
+
+            <form id="login-form" autocomplete="off">
+                <div class="field-group">
+                    <label>Mobile Number / Username</label>
+                    <input type="text" id="suc" placeholder="e.g. 2495850213" required autocomplete="off" spellcheck="false">
+                </div>
+                <div class="field-group">
+                    <label>Password</label>
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                </div>
+
+                <button type="submit" class="btn-primary" id="submit-btn">
+                    <span id="btn-text">🚀 Fetch My Attendance</span>
+                    <span class="btn-loader" id="loader"></span>
                 </button>
-                <div class="topbar-info">
-                    <span id="student-name-display">Student</span>
-                    <small id="campus-course-display"></small>
-                </div>
-                <div class="topbar-badge" id="topbar-badge">—</div>
-            </div>
+                <p id="error-box" class="error-msg"></p>
+            </form>
 
-            <!-- big ring -->
-            <div class="ring-wrap">
-                <svg class="ring-svg" viewBox="0 0 180 180">
-                    <circle class="ring-track" cx="90" cy="90" r="78"/>
-                    <circle class="ring-fill" id="ring-fill" cx="90" cy="90" r="78" stroke-dasharray="490" stroke-dashoffset="490"/>
-                </svg>
-                <div class="ring-label">
-                    <span id="ring-pct" class="ring-pct">0%</span>
-                    <span class="ring-sub" id="ring-sub">0 / 0 Days</span>
-                </div>
-            </div>
+            <p class="privacy-note">🔒 Your credentials go directly to <strong>analysis.aditya.ac.in</strong> via a local proxy. Nothing is stored, logged, or shared.</p>
+        </div>
+    </div>
 
-            <!-- cards row -->
-            <div class="cards-row">
-                <div class="info-card">
-                    <p class="card-label">Fee Due</p>
-                    <p class="card-val" id="fee-val">₹ —</p>
-                </div>
-                <div class="info-card" id="status-card">
-                    <p class="card-label" id="status-label">Status</p>
-                    <p class="card-val" id="status-days">—</p>
-                </div>
-            </div>
+    <!-- ── RESULTS PAGE ──────────────────────────── -->
+    <div id="results-page" class="page">
+        <nav class="navbar">
+            <button id="back-btn" class="back-btn">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Back
+            </button>
+            <span class="nav-tag" id="status-pill">—</span>
+        </nav>
 
-            <!-- action message -->
-            <div class="action-glass" id="action-glass">
-                <div class="action-dots">
-                    <span></span><span></span><span></span>
-                </div>
-                <p class="action-msg" id="action-msg">Calculating…</p>
+        <div class="result-hero">
+            <p class="result-label">Overall Attendance</p>
+            <div class="result-pct-wrap">
+                <span id="result-pct" class="result-pct big-num">0%</span>
+            </div>
+            <p class="result-days" id="result-days">0 / 0 Days</p>
+        </div>
+
+        <div class="result-cards">
+            <div class="res-card">
+                <p class="res-card-label">Student</p>
+                <p class="res-card-val" id="res-name">—</p>
+                <p class="res-card-sub" id="res-campus">—</p>
+            </div>
+            <div class="res-card">
+                <p class="res-card-label">Fee Due</p>
+                <p class="res-card-val" id="res-fee">—</p>
             </div>
         </div>
 
+        <div class="action-card" id="action-card">
+            <p class="action-icon" id="action-icon">⚡</p>
+            <p class="action-text" id="action-text">Calculating…</p>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
