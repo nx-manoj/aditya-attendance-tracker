@@ -8,6 +8,9 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from playwright.sync_api import sync_playwright
 from pywebpush import webpush, WebPushException
+import threading
+import requests
+from twilio.rest import Client
 
 app = Flask(__name__)
 CORS(app)
@@ -23,6 +26,11 @@ if os.path.exists('.env'):
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_CLAIMS = {"sub": "mailto:admin@adityatracker.local"}
+
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_WHATSAPP_NUMBER = os.environ.get("TWILIO_WHATSAPP_NUMBER", "")
 
 SUBSCRIPTIONS_FILE = 'subscriptions.json'
 
@@ -130,6 +138,84 @@ def fetch_attendance(suc_code, password):
     except Exception as e:
         return {"error": "An unexpected error occurred during scraping.", "details": str(e)}
 
+# ─── BOT BACKGROUND WORKERS ──────────────────────────────────────────────────
+
+def send_telegram_message(chat_id, text):
+    if not TELEGRAM_BOT_TOKEN:
+        return
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print("Telegram send error:", e)
+
+def background_fetch_telegram(chat_id, text_body):
+    parts = text_body.strip().split()
+    if len(parts) >= 2:
+        suc_code = parts[0]
+        password = " ".join(parts[1:])
+        send_telegram_message(chat_id, "Fetching your attendance, please wait... ⏳")
+        att = fetch_attendance(suc_code, password)
+        
+        if "error" in att:
+            reply = "Error: " + att.get("error", "Failed to fetch attendance.")
+        else:
+            student = att.get("student_name", "").split()[0]
+            pct = att.get("overall_percentage")
+            status = att.get("status")
+            target = att.get("target_days", 0)
+            if status == "safe":
+                if target > 0:
+                    reply = f"Hello {student}! ✅ You are safe.\nOverall: {pct}\nYou can safely bunk the next {target} days and stay at 75%."
+                else:
+                    reply = f"Hello {student}! ✅ You are safe.\nOverall: {pct}\nYou are exactly at your 75% target."
+            else:
+                reply = f"Hello {student}! ⚠ Shortage.\nOverall: {pct}\nYou need to attend the next {target} days to reach 75%."
+        
+        send_telegram_message(chat_id, reply)
+    else:
+        send_telegram_message(chat_id, "Please send your credentials in the format:\n<SUC_CODE> <PASSWORD>")
+
+def send_whatsapp_message(to_number, text):
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_WHATSAPP_NUMBER:
+        return
+    try:
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        client.messages.create(
+            body=text,
+            from_=TWILIO_WHATSAPP_NUMBER,
+            to=to_number
+        )
+    except Exception as e:
+        print("Twilio send error:", e)
+
+def background_fetch_whatsapp(to_number, text_body):
+    parts = text_body.strip().split()
+    if len(parts) >= 2:
+        suc_code = parts[0]
+        password = " ".join(parts[1:])
+        send_whatsapp_message(to_number, "Fetching your attendance, please wait... ⏳")
+        att = fetch_attendance(suc_code, password)
+        
+        if "error" in att:
+            reply = "Error: " + att.get("error", "Failed to fetch attendance.")
+        else:
+            student = att.get("student_name", "").split()[0]
+            pct = att.get("overall_percentage")
+            status = att.get("status")
+            target = att.get("target_days", 0)
+            if status == "safe":
+                if target > 0:
+                    reply = f"Hello {student}! ✅ You are safe.\nOverall: {pct}\nYou can safely bunk the next {target} days and stay at 75%."
+                else:
+                    reply = f"Hello {student}! ✅ You are safe.\nOverall: {pct}\nYou are exactly at your 75% target."
+            else:
+                reply = f"Hello {student}! ⚠ Shortage.\nOverall: {pct}\nYou need to attend the next {target} days to reach 75%."
+        
+        send_whatsapp_message(to_number, reply)
+    else:
+        send_whatsapp_message(to_number, "Please send your credentials in the format:\n<SUC_CODE> <PASSWORD>")
 
 # ─── ROUTES ───────────────────────────────────────────────────────────────────
 
@@ -219,6 +305,35 @@ def cron_daily():
             results.append(f"SCRAPE_FAIL: {suc}")
 
     return jsonify({"cron_results": results, "count": len(results)})
+
+@app.route('/api/telegram', methods=['POST'])
+def telegram_webhook():
+    data = request.json
+    if not data or "message" not in data:
+        return jsonify({"status": "ok"})
+    
+    chat_id = data["message"]["chat"]["id"]
+    text_body = data["message"].get("text", "")
+    
+    # Run in background to avoid Telegram webhook timeout
+    t = threading.Thread(target=background_fetch_telegram, args=(chat_id, text_body))
+    t.start()
+    
+    return jsonify({"status": "ok"})
+
+@app.route('/api/whatsapp', methods=['POST'])
+def whatsapp_webhook():
+    from_number = request.form.get("From")
+    text_body = request.form.get("Body", "")
+    
+    if from_number:
+        # Run in background to avoid Twilio webhook timeout
+        t = threading.Thread(target=background_fetch_whatsapp, args=(from_number, text_body))
+        t.start()
+    
+    # Empty TwiML response to acknowledge Twilio webhook immediately
+    twiml_response = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
+    return twiml_response, 200, {'Content-Type': 'text/xml'}
 
 
 if __name__ == '__main__':

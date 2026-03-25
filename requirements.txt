@@ -4,3 +4,5 @@ playwright==1.42.0
 gunicorn==21.2.0
 pywebpush
 cryptography
+twilio
+requests
